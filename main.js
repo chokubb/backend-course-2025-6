@@ -4,6 +4,8 @@ const path = require("path");
 const express = require("express");
 const multer = require("multer");
 const { Command } = require("commander");
+const swaggerJsdoc = require("swagger-jsdoc");
+const swaggerUi = require("swagger-ui-express");
 
 const program = new Command();
 program
@@ -21,6 +23,22 @@ if (!fs.existsSync(opts.cache)) {
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Swagger config
+const swaggerOptions = {
+  swaggerDefinition: {
+    openapi: "3.0.0",
+    info: {
+      title: "Inventory Service API",
+      version: "1.0.0",
+      description: "Лабораторна робота №6"
+    },
+    servers: [{ url: `http://${opts.host}:${opts.port}` }]
+  },
+  apis: ["./docs.js"]
+};
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, opts.cache),
@@ -102,7 +120,7 @@ app.put("/inventory/:id", (req, res) => {
 app.get("/inventory/:id/photo", (req, res) => {
   const item = findItem(req.params.id);
   if (!item || !item.photo) return res.sendStatus(404);
-  const filePath = path.join(opts.cache, item.photo);
+  const filePath = path.resolve(opts.cache, item.photo);
   if (!fs.existsSync(filePath)) return res.sendStatus(404);
   res.type("jpeg");
   res.sendFile(filePath);
